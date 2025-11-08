@@ -1,0 +1,149 @@
+#DESTINATION#
+CREATE DESTINATION:
+{
+  "name": "My Analytics Destination",
+  "description": "S3 bucket for storing analytics data",
+  "status": "Active",
+  "location": {
+    "cloud": "aws",
+    "product": "s3",
+    "auth": {
+      "type": "CONSUMER_ROLE",
+      "consumerArn": "nageshsbvjdvjkdjkchennuri",
+      "arn": "advikaaarjunnksk"
+    },
+    "bucket_info": {
+      "region": "eu-west-2",
+      "bucket_name": "altlab320",
+      "path": "altlab320/exports/BackTest",
+      "is_external": false
+    },
+    "location_type": "destination"
+  }
+}
+
+
+DESTINATION UPDATE:
+
+{
+
+  "name": "today Analytics Destination",
+  "description": "S3 bucket for storing analytics data",
+ 
+  "status": "Active",
+  
+  "location": {
+    "cloud": "aws",
+    "product": "s3",
+    "auth": {
+      "type": "ACCESS_KEY",
+      "accessKey": "nageshsbvjdvjkdjkchennuri",
+      "secretAccessKey": "advikaaarjunnksk"
+    },
+    "bucket_info": {
+      "region": "eu-west-2",
+      "bucket_name": "altlab320",
+      "path": "altlab320/exports/BackTest",
+      "is_external": false
+    },
+    "location_type": "destination"
+    
+ 
+  }
+}
+
+
+ DESTINATION PATCH: 
+
+ only single field:--
+1)
+ {
+  "name": "Updated Destination Name"
+}
+
+2)
+{
+  "status": "Inactive"
+}
+
+
+*)
+only location:--
+{
+  "location": {
+    "cloud": "azure",
+    "product": "blobstorage"
+  }
+}
+
+*)
+only secretAccessKey:--
+{
+  "location": {
+    "auth": {
+      "secretAccessKey": "UPDATED_SECRET_KEY"
+    }
+  }
+}
+
+
+only bucket info as dictionary:--
+
+{
+  "location": {
+    "bucket_info": {
+      "path": "exports/new-path",
+       "region": "eu-north-4",
+        "bucket_name":"nag",
+            "is_external": "true"
+    }
+  }
+}
+
+---------------------------------
+
+#SOURCE#
+CREATE SOURCE:--
+{
+  "name": "today source",
+  "description": "Updated description",
+  "status": "Active",
+  "location": {
+    "cloud": "aws",
+    "product": "s3",
+    "auth": {
+      "type": "ACCESS_KEY",
+      "accessKey": "NAGESHushaAMPLE123",
+      "secretAccessKey": "usha NAGESH abc123xyz789"
+    },
+    "bucket_info": {
+      "region": "eu-west-10",
+      "bucket_name": "altlab350",
+      "path": "x/y/z/240003",
+      "is_external": true
+    },
+    "location_type": "source"
+  }
+}
+
+SOURCE PATCH:
+{
+  "status": "Active"
+}
+
+
+{
+  "name": "Updated Source Name",
+  "description": "Updated description"
+}
+
+{
+  "location": {
+    "bucket_info": {
+      "bucket_name": "altlab450",
+        "region": "eu-west-10",
+         "path" : "x/y/2400",
+          "is_external": false
+    }
+  }
+}
