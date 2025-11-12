@@ -19,6 +19,18 @@ class AccessRole(str, Enum):
     DEVELOPER = "developer"
     VIEWER = "viewer" 
 
+class ShareStatus(str, Enum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    ERROR = "error"    
+
+class SourceStatus(str, Enum):
+    CONNECTED = "connected"
+    ERROR = "error"
+
+class DestinationStatus(str, Enum):
+    CONNECTED = "connected"
+    ERROR = "error"    
 #-----------------------
 
 class AuthBase(BaseModel):
@@ -255,7 +267,7 @@ class SignupRequest(BaseModel):
     last_name: str
     email: EmailStr
     organization_name: str
-
+    
     @field_validator("first_name", "last_name", "organization_name")
     def validate_non_empty(cls, value: str, field):
         """
@@ -271,11 +283,15 @@ class SignupResponse(BaseModel):
     message: str
     organization_id: str
     user_id: str
+    invited_by: Optional[str] = None
+
+
 
 
 class SetPasswordRequest(BaseModel):
     user_id: str
     password: str
+
 
 
 class UserSignupRequest(BaseModel):

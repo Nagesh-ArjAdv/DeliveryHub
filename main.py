@@ -55,7 +55,8 @@ async def signup(payload: SignupRequest, session: Session = Depends(get_session)
     session.add(org)
     session.commit()
     session.refresh(org)
-
+    
+    #inviter_id = payload.invited_id
     user = User(
         id=str(uuid.uuid4()),
         organization_id=org.id,
@@ -66,6 +67,7 @@ async def signup(payload: SignupRequest, session: Session = Depends(get_session)
         access=AccessRole.ADMIN,
         is_active=False,
         created_at=datetime.utcnow(),
+        
     )
     session.add(user)
     session.commit()
@@ -75,6 +77,7 @@ async def signup(payload: SignupRequest, session: Session = Depends(get_session)
         message="Signup successful. Please complete your registration to activate your account.",
         organization_id=org.id,
         user_id=user.id,
+        #invited_by=user.invited_by
     )
 
 

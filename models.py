@@ -1,9 +1,10 @@
-from schemas.pymodels import LocationType,AccessRole
+from schemas.pymodels import LocationType,AccessRole , ShareStatus ,SourceStatus,DestinationStatus
 from sqlmodel import SQLModel, Field, Column, JSON,Relationship
 from datetime import datetime
-from typing import Optional, Dict ,List
+from typing import Optional, Dict ,List 
 from uuid import uuid4
-import uuid 
+import uuid
+from sqlalchemy import Enum as SQLAlchemyEnum
 
 
 
@@ -19,7 +20,7 @@ class Location(SQLModel, table=True):
     product: str = Field(..., description="Product under the cloud, e.g., s3, gcs, bigquery")
     auth: Dict = Field(default_factory=dict, sa_column=Column(JSON), description="Authentication details")
     bucket_info: Dict = Field(default_factory=dict, sa_column=Column(JSON), description="Contains region, bucket_name, and path info")
-    location_type: str = Field(..., description="Specifies whether this location is used for source or destination")
+    location_type: LocationType = Field(..., description="Specifies whether this location is used for source or destination")
 
     destinations: List["Destination"] = Relationship(back_populates="location")
     sources: List["Source"] = Relationship(back_populates="location")
@@ -32,7 +33,8 @@ class Source(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
     name: str = Field(..., description="Name of the source") # ..., means required field,If the value is not passed, a validation error will be thrown
     description: Optional[str] = Field(default=None, description="Description of this source")
-    status: str = Field(default="Active", description="source location status is Active/Inactive")
+    status: SourceStatus = Field(default=SourceStatus.CONNECTED,sa_column=Column(SQLAlchemyEnum(SourceStatus, native_enum=False, validate_strings=True)),description="Source connection status (connected/error)")
+    error_message: Optional[str] = Field(default=None, description="Error message if connection fails")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     created_by: str = Field(foreign_key="users.id")
@@ -49,7 +51,8 @@ class Destination(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
     name: str = Field(..., description="Name of the destination") # required field
     description: Optional[str] = Field(default=None, description="Description of this destination")
-    status: str = Field(default="Active", description="Destination location status is Active/Inactive")
+    status: DestinationStatus = Field(default=DestinationStatus.CONNECTED,sa_column=Column(SQLAlchemyEnum(DestinationStatus, native_enum=False, validate_strings=True)),description="Destination connection status (connected/error)")
+    error_message: Optional[str] = Field(default=None, description="Error message if destination connection fails")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     created_by: str = Field(foreign_key="users.id")
@@ -60,6 +63,24 @@ class Destination(SQLModel, table=True):
 
 
 
+
+class DataShare(SQLModel, table=True):
+    __tablename__ = "datashares"
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, index=True)
+    name: str = Field(..., description="Name of the data share job")
+    description: Optional[str] = Field(default=None, description="Optional description of the share")
+    source_id: str = Field(..., foreign_key="sources.id", description="Linked source ID")
+    destination_id: str = Field(..., foreign_key="destinations.id", description="Linked destination ID")
+    schedule: str = Field(default=None, description="Type of schedule, e.g. daily/weekly")
+    cronjob_text: Optional[str] = Field(default=None, description="Cronjob expression for scheduled runs")
+    data_transferred: Optional[float] = Field(default=0.0, description="Amount of data transferred in MB")
+    status: Optional[ShareStatus] = Field(default=ShareStatus.ACTIVE,sa_column=Column(SQLAlchemyEnum(ShareStatus, native_enum=False, validate_strings=True)),description="Current status of the share")
+    error_message: Optional[str] = Field(default=None, description="Last error message if status=error")
+    is_active: bool = Field(default=True, description="Indicates if the share is active or soft-deleted")
+
+
+    
 
 
 class Organization(SQLModel, table=True):
@@ -87,5 +108,8 @@ class User(SQLModel, table=True):
     hashed_password: str = Field(..., description="User password (hashed)")
     created_at: datetime = Field(default_factory=datetime.utcnow, description="Account creation timestamp")
     last_login: Optional[datetime] = Field(default=None, description="Last login timestamp")
+    invited_by : str =Field(foreign_key = "users.id")
     
+    inviter: Optional["User"] = Relationship(back_populates="invited_users", sa_relationship_kwargs={"remote_side": "User.id"})
+    invited_users: list["User"] = Relationship(back_populates="inviter")
 
