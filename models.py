@@ -30,7 +30,7 @@ class Source(SQLModel, table=True):
     __tablename__ = "sources"
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
-    name: str = Field(..., description="Name of the source")
+    name: str = Field(..., description="Name of the source") # ..., means required field,If the value is not passed, a validation error will be thrown
     description: Optional[str] = Field(default=None, description="Description of this source")
     status: str = Field(default="Active", description="source location status is Active/Inactive")
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -47,7 +47,7 @@ class Destination(SQLModel, table=True):
     __tablename__ = "destinations"
 
     id: str = Field(default_factory=lambda: str(uuid4()), primary_key=True, index=True)
-    name: str = Field(..., description="Name of the destination")
+    name: str = Field(..., description="Name of the destination") # required field
     description: Optional[str] = Field(default=None, description="Description of this destination")
     status: str = Field(default="Active", description="Destination location status is Active/Inactive")
     created_at: datetime = Field(default_factory=datetime.utcnow)
@@ -79,7 +79,7 @@ class User(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True, index=True)
     organization_id: str = Field(foreign_key="organizations.id")
 
-    first_name: str = Field(..., description="First name of the user")
+    first_name: str = Field(..., description="First name of the user") 
     last_name: str = Field(..., description="Last name of the user")
     email: str = Field(..., unique=True, index=True, description="Email address of the user")
     access: AccessRole = Field(default=AccessRole.VIEWER, description="User access role: admin, developer, or viewer")

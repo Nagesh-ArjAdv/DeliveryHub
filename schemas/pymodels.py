@@ -175,16 +175,10 @@ class DestinationUpdateResponse(BaseModel):
 
 
 
-
-# =====================
-# 🔹 Source Models
-# =====================
 class SourceBase(BaseModel):
     name: str = Field(..., description="Name of the source")
     description: Optional[str] = Field(None, description="Description of this source")
-    status: Literal["Active", "Inactive"] = Field(
-        "Active", description="Source status"
-    )
+    status: Literal["Active", "Inactive"] = Field("Active", description="Source status")
 
     @field_validator("name")
     def validate_name(cls, value):
@@ -201,56 +195,18 @@ class SourceBase(BaseModel):
 
 
 class SourceCreate(SourceBase):
-    location: "LocationCreate" = Field(
-        ..., description="Associated location for this source"
-    )
+    location: "LocationCreate" = Field(..., description="Associated location for this source")
 
     @field_validator("location")
     def validate_location_type(cls, value):
         if value.location_type.lower() != "source":
             raise ValueError("Location type must be 'source' for Source creation.")
         return value
-
-
-class SourceUpdate(SourceBase):
-   
-    organization_id: Optional[str] = None
-    id: Optional[str] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    location_uuid: Optional[str] = None
-    location: Optional["LocationResponse"] = None  # 
-
-    class Config:
-        from_attributes = True
-
-
-
-class SourceResponse(SourceBase):
-    id: str
-    created_at: datetime
-    updated_at: datetime
-    location_uuid: str
-    organization_id: str
-    location: Optional["LocationResponse"] = None
-
-    class Config:
-        from_attributes = True
-
-
-
-class SourceUpdateResponse(BaseModel):
-    message: str
-    destination: DestinationResponse
-
-class SourcePatch(BaseModel):
+class SourceUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     status: Optional[Literal["Active", "Inactive"]] = None
-    location: Optional[LocationUpdate] = None  
-
-    class Config:
-        from_attributes = True
+    location: Optional["LocationUpdate"] = None  # ✅ Partial update model
 
     @field_validator("name")
     def validate_name(cls, value):
@@ -258,6 +214,37 @@ class SourcePatch(BaseModel):
             raise ValueError("Source name cannot be empty.")
         return value
 
+    @field_validator("location")
+    def validate_location_type(cls, value):
+        """
+        Validate location_type *only if provided*.
+        Allow partial updates (i.e., only bucket_info.region).
+        """
+        if value is None:
+            return value
+
+        if isinstance(value, dict):
+            location_type = value.get("location_type")
+        else:
+            location_type = getattr(value, "location_type", None)
+
+        if location_type is not None and location_type.lower() != "source":
+            raise ValueError("Location type must be 'source' for Source update.")
+
+        return value
+class SourceResponse(SourceBase):
+    organization_id: str
+    id: str
+    created_at: datetime
+    updated_at: datetime
+    location_uuid: Optional[str]
+    location: Optional[LocationResponse] = None
+
+    class Config:
+        from_attributes = True
+class SourceUpdateResponse(BaseModel):
+    message: str
+    source: SourceResponse  # ✅ Fix field name to source
 
 
 #----------------------------------------------

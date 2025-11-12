@@ -18,28 +18,22 @@ router = APIRouter(prefix="/sources", tags=["Sources"])
 
 
 @router.post("/", response_model=SourceResponse)
-def create_source(
-    payload: SourceCreate,
-    current_user: User = Depends(get_current_user),
-    session: Session = Depends(get_session)
-):
-    # ✅ Validate nested location first
+def create_source(payload: SourceCreate,current_user: User = Depends(get_current_user),session: Session = Depends(get_session)):
+    
     validate_location_data(payload.location.dict())
 
-    # ✅ Create location entry — assign created_by BEFORE commit
     location = Location(**payload.location.model_dump())
-    location.created_by = current_user.id   # <-- Important line
+    location.created_by = current_user.id  
     session.add(location)
     session.commit()
     session.refresh(location)
 
-    # ✅ Create source and reference the new location
     source = Source(
         name=payload.name,
         description=payload.description,
         status=payload.status,
-        location_uuid=location.id,  # ✅ use location.id
-        organization_id=current_user.organization_id,  # ✅ derive from current_user
+        location_uuid=location.id,  
+        organization_id=current_user.organization_id,  
         created_by=current_user.id
     )
 
@@ -47,7 +41,6 @@ def create_source(
     session.commit()
     session.refresh(source)
 
-    # ✅ Return response
     return SourceResponse.model_validate(source, from_attributes=True)
 
 
@@ -56,6 +49,10 @@ def create_source(
 def get_all_sources(session: Session = Depends(get_session)):
 
     sources = session.exec(select(Source)).all()
+
+    if not sources:
+      raise HTTPException(status_code=404, detail="No destinations found")
+
     return sources
 
 
@@ -69,7 +66,7 @@ def get_source_by_id(source_id: str, session: Session = Depends(get_session)):
 
 
 @router.put("/{source_id}", response_model=SourceUpdateResponse)
-def update_source(source_id: str, payload: SourceUpdate, session: Session = Depends(get_session)):
+def update_source(source_id: str, payload: SourceCreate, session: Session = Depends(get_session)):
 
     source = session.get(Source, source_id)
     if not source:
@@ -92,45 +89,41 @@ def update_source(source_id: str, payload: SourceUpdate, session: Session = Depe
     session.add(source)
     session.commit()
     session.refresh(source)
-    return SourceUpdateResponse.model_validate(source, from_attributes=True)
+    
+    return SourceUpdateResponse(
+    message="Source updated successfully",
+    source=SourceResponse.model_validate(source, from_attributes=True)
+)
 
 
-@router.patch("/{source_id}", response_model=SourceResponse)
-def patch_source(
-    source_id: str,
-    payload: SourcePatch,
-    session: Session = Depends(get_session),
-):
+@router.patch("/{source_id}", response_model=SourceUpdateResponse)
+def patch_source(source_id: str,payload: SourceUpdate,session: Session = Depends(get_session)):
+
     source = session.get(Source, source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
 
-    # ✅ Update top-level Source fields
     for key, value in payload.model_dump(exclude_unset=True, exclude={"location"}).items():
         setattr(source, key, value)
 
-    # ✅ Update Location (if included)
     if payload.location:
         location = session.get(Location, source.location_uuid)
         if not location:
             raise HTTPException(status_code=404, detail="Linked location not found")
 
-        # Validate first
+        
         validate_location_data(
         payload.location.model_dump(exclude_unset=True),
         partial=True
     )
 
-
-        # ✅ Deep merge nested dict fields (important)
         updates = payload.location.model_dump(exclude_unset=True)
 
         for field, value in updates.items():
             current = getattr(location, field)
 
-            # ✅ Deep-merge only dict fields
             if isinstance(current, dict) and isinstance(value, dict):
-                merged = {**current, **value}  # left = existing, right = update
+                merged = {**current, **value}  
                 setattr(location, field, merged)
             else:
                 setattr(location, field, value)
@@ -143,7 +136,11 @@ def patch_source(
     session.commit()
     session.refresh(source)
 
-    return SourceResponse.model_validate(source, from_attributes=True)
+    return SourceUpdateResponse(
+    message="Source updated successfully",
+    source=SourceResponse.model_validate(source, from_attributes=True)
+)
+
 
 
 

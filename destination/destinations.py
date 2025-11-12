@@ -20,9 +20,6 @@ router = APIRouter(prefix="/destinations", tags=["Destinations"])
 
 
 
-
-
-
 @router.post("/", response_model=DestinationResponse, status_code=status.HTTP_201_CREATED)
 async def create_destination(payload: DestinationCreate,session: Session = Depends(get_session),current_user: User = Depends(get_current_user)):
     """
@@ -30,10 +27,8 @@ async def create_destination(payload: DestinationCreate,session: Session = Depen
     Validates both literal + nested Location fields.
     """
 
-   
     validate_location_data(payload.location.model_dump())
 
-    
     location = Location(
         cloud=payload.location.cloud.lower(),
         product=payload.location.product.lower(),
@@ -65,17 +60,7 @@ async def create_destination(payload: DestinationCreate,session: Session = Depen
     session.refresh(destination)
 
     
-    return DestinationResponse(
-        id=destination.id,
-        name=destination.name,
-        description=destination.description,
-        status=destination.status,
-        created_at=destination.created_at,
-        updated_at=destination.updated_at,
-        organization_id=destination.organization_id,
-        location_uuid=location.id,
-        location=location,
-    )
+    return DestinationResponse
 
 
 
@@ -97,6 +82,9 @@ def get_all_destinations(session: Session = Depends(get_session)):
 
 @router.get("/{destination_id}", response_model=DestinationResponse)
 def get_single_destination(destination_id: str, session: Session = Depends(get_session)):
+    """
+    Fetch single destinations with nested location details.
+    """
     stmt = (
         select(Destination)
         .where(Destination.id == destination_id)
@@ -113,26 +101,40 @@ def get_single_destination(destination_id: str, session: Session = Depends(get_s
 
 @router.put("/{destination_id}", response_model=DestinationUpdateResponse)
 def update_destination(destination_id: str, payload: DestinationCreate, session: Session = Depends(get_session)):
-    # 1. Fetch destination
+    """
+    Update an existing Destination along with its associated Location.
+
+    Steps:
+    1. Fetch the Destination using the provided ID; return 404 if not found.
+    2. Validate the incoming Location data with full (non-partial) validation.
+    3. Update Destination fields including timestamps.
+    4. Fetch the linked Location and update its fields.
+       - If a field is a dictionary (e.g., auth, bucket_info), merge it and mark it modified.
+       - Otherwise, replace the field value directly.
+    5. Commit both Destination and Location updates in the database.
+    6. Convert the updated Destination into a response model and return a success message.
+
+    Returns:
+        dict: {
+            "message": "Destination updated successfully",
+            "destination": <DestinationResponse>
+        }
+    """
     destination = session.get(Destination, destination_id)
     if not destination:
         raise HTTPException(status_code=404, detail="Destination not found")
 
-    # 2. Validate location payload
     validated_data = validate_location_data(payload.location.model_dump(), partial=False)
 
-    # 3. Update destination fields
     destination.name = payload.name
     destination.description = payload.description
     destination.status = payload.status
     destination.updated_at = datetime.utcnow()
 
-    # 4. Fetch the location linked to this destination
     location = session.get(Location, destination.location_uuid)
     if not location:
         raise HTTPException(status_code=404, detail=f"Linked location not found for UUID: {destination.location_uuid}")
 
-    # 5. Update location fields
     for key, value in validated_data.model_dump().items():
         if hasattr(location, key):
             current_val = getattr(location, key)
@@ -169,7 +171,10 @@ def update_destination(destination_id: str, payload: DestinationCreate, session:
    
 @router.patch("/{destination_id}", response_model=DestinationUpdateResponse)
 def patch_destination(destination_id: str,payload: DestinationUpdate,session: Session = Depends(get_session)):
+    """
+    Partially update an existing Destination and its associated Location.
     
+    """
     destination = session.get(Destination, destination_id)
     if not destination:
         raise HTTPException(status_code=404, detail="Destination not found")
